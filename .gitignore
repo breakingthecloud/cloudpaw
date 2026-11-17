@@ -1,0 +1,66 @@
+# CloudPaw is a PUBLIC repository. Nothing that identifies an AWS account, a person or a machine may be committed.
+# The test app/agent/tests/test_repo_hygiene.py fails if account IDs, AWS resource IDs, keys or local paths slip in.
+
+# ── Secrets and local configuration: never commit ──────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.local.env
+!*.local.env.example
+*.local.json
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+.aws/
+credentials
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# ── AgentCore CLI and CDK (their state holds ARNs with the AWS account ID) ─────────────────────────────────────────
+agentcore/.cli/
+agentcore/.cache/
+agentcore/cdk/cdk.out/
+agentcore/cdk/cdk.context.json
+agentcore/cdk/dist/
+.cdk.staging/
+
+# ── Python ───────────────────────────────────────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# ── Node ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ── Simulation, ROS 2 and RL outputs ─────────────────────────────────────────────────────────────────────────────
+MUJOCO_LOG.TXT
+*.log
+!workshop/ensayo/*-console.log
+# colcon workspaces
+build/
+install/
+log/
+# recordings, training runs and checkpoints (large, machine-specific)
+datasets/
+runs/
+checkpoints/
+wandb/
+
+# ── OS and editors ───────────────────────────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudPaw V2: del texto al movimiento con física — stack completo</title>
+<!-- Sin fuentes ni imágenes externas: funciona sin internet. Teclas: → / espacio avanzan, ← retroceden, Home/End. -->
+<link rel="stylesheet" href="shared/deck.css">
+</head>
+<body>
+<div class="progress" id="prog"></div>
+
+<!-- 1 · Título -->
+<div class="slide active v-spot">
+  <p class="kicker">CloudPaw · V2 · UTEC · IEEE RAS</p>
+  <h1>Del texto al <span class="highlight">movimiento</span><br>con física real</h1>
+  <p class="sub" style="font-size:1.3rem;color:var(--text)">Strands Agents · strands-robots · MuJoCo · PPO · ESP32 · ROS 2 · Gazebo · AWS</p>
+  <p class="sub" style="margin-top:28px;font-size:1rem">Carlos Cortez · AWS Community Hero · lo que se construyó, lo que se midió y lo que falta</p>
+</div>
+
+<!-- 2 · Dónde quedó la V1 -->
+<div class="slide v-light l-left">
+  <p class="kicker">Punto de partida</p>
+  <h2>La V1 entendía. <span class="highlight">No tenía cuerpo.</span></h2>
+  <div class="grid g2">
+    <div class="card"><h4>Lo que ya funcionaba (V1)</h4><p>Agente Strands con 7 herramientas acotadas, en español e inglés. Límites en el código, reflejo de parada, estados. 112 tests.</p></div>
+    <div class="card o"><h4>Lo que faltaba</h4><p>El robot era un simulador de puntos: "avanzar 1 m" sumaba 1 m. Sin gravedad, sin patas, sin caídas.</p></div>
+    <div class="card c"><h4>La pregunta de la V2</h4><p>¿El mismo agente, sin cambiar su código, puede mover un cuerpo con física?</p></div>
+    <div class="card p"><h4>Y después</h4><p>¿Cómo se convierte eso en un cuadrúpedo de 8 servos que camina sobre un ESP32?</p></div>
+  </div>
+</div>
+
+<!-- 3 · El stack completo -->
+<div class="slide v-cyan l-left">
+  <p class="kicker">El stack completo</p>
+  <div class="title-rule" style="background:linear-gradient(90deg,var(--cyan),var(--blue))"></div>
+  <h2>Seis capas, <span class="h-c">una sola interfaz</span></h2>
+  <div class="term" style="max-width:980px;margin-left:0">
+    <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="t">de arriba (intención) a abajo (motores)</span></div>
+    <div class="term-body">
+<span class="cmd">1 · Agente</span>        <span class="o">Strands + Bedrock (Claude Haiku) · AgentCore Runtime</span>   <span class="ok">"avanza 1 metro"</span><br>
+<span class="cmd">2 · Herramientas</span>  <span class="o">walk · turn · stop … + límites en código + reflejo</span>     <span class="ok">walk(forward, 1)</span><br>
+<span class="cmd">3 · RobotDriver</span>   <span class="o">la frontera: 8 métodos, igual para sim y real</span><br>
+<span class="cmd">4 · Simulación</span>    <span class="o">strands-robots + MuJoCo · ROS 2 + Gazebo</span><br>
+<span class="cmd">5 · Política PPO</span>  <span class="o">MLP 26→64→64→8 a 50 Hz</span>                              <span class="ok">8 ángulos</span><br>
+<span class="cmd">6 · Hardware</span>      <span class="o">ESP32-S3 + 8 servos + IMU (inferido)</span>
+    </div>
+  </div>
+  <p class="sub" style="margin-left:0;margin-top:14px;font-size:1rem;color:var(--muted)">Todo corre en una EC2 de operaciones; el código es público: <span class="mono">github.com/breakingthecloud/cloudpaw</span></p>
+</div>
+
+<!-- 4 · La EC2 de operaciones -->
+<div class="slide v-accent l-left">
+  <p class="kicker">Centro de operaciones</p>
+  <div class="title-rule"></div>
+  <h2>Una EC2 con todo, <span class="highlight">sin puertos abiertos</span></h2>
+  <div class="grid g3">
+    <div class="card"><h4><img src="assets/aws-ec2.svg" alt="Amazon EC2" style="width:32px;height:32px"> m7i.xlarge</h4><p>4 vCPU, 16 GiB, Ubuntu 24.04. Sin créditos de ráfaga: el entrenamiento PPO usa la CPU al 100% durante horas.</p></div>
+    <div class="card c"><h4><img src="assets/aws-systems-manager.svg" alt="AWS Systems Manager" style="width:32px;height:32px"> Solo SSM</h4><p>Security group sin reglas de entrada, IMDSv2 obligatorio. Foxglove llega por túnel SSM al puerto 8765.</p></div>
+    <div class="card o"><h4>Se apaga sola</h4><p>Alarma: 1 h con CPU &lt; 5% → <b>stop</b>. $0.20/h encendida + ~$5/mes de disco.</p></div>
+  </div>
+  <p class="sub" style="margin-left:0;margin-top:18px;font-size:1rem">Instalación idempotente en ~4.5 min: ROS 2 Jazzy (375 paquetes), Gazebo 8, ros2_control, foxglove_bridge, uv + Python 3.12, Node 22 + pnpm, CLI de AgentCore.</p>
+</div>
+
+<!-- 5 · strands-robots -->
+<div class="slide v-light l-left">
+  <p class="kicker">La librería de cuerpos</p>
+  <h2><span class="highlight">strands-robots</span> 0.6.0 (Strands Labs)</h2>
+  <table class="tbl" style="margin-left:0">
+    <thead><tr><th>Ofrece</th><th>No ofrece (aún)</th></tr></thead>
+    <tbody>
+      <tr><td>76 robots por nombre en MuJoCo (sin GPU), mismo código en hardware</td><td>Política de marcha para cuadrúpedos (solo bípedo y humanoide)</td></tr>
+      <tr><td>Manifiesto de límites, cadena de seguridad, e-stop que nada bloquea</td><td>Mover un Unitree real: su driver solo <b>lee</b></td></tr>
+      <tr><td>Aprobación del operador para robots reales</td><td>Un modelo del CloudPaw (usamos Go2 y microduck)</td></tr>
+      <tr><td><span class="mono">robot.tool</span> para agentes, generado desde el manifiesto</td><td></td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin-left:0;margin-top:16px;font-size:1rem;color:var(--muted)">Apache-2.0, activo (release del 14-nov-2026). Verificado instalándolo, no leyendo el marketing.</p>
+</div>
+
+<!-- 6 · Hallazgo: el Go2 se caía -->
+<div class="slide v-orange l-split">
+  <div class="split wide-right">
+    <div class="col">
+      <p class="kicker" style="color:var(--orange)">Hallazgo 1</p>
+      <h2 style="font-size:2rem">El cuadrúpedo <span class="h-o">se desplomaba</span></h2>
+      <p class="sub">El Go2 trae actuadores de <b>torque</b>. <span class="mono">set_gains(kp, kd)</span> escribe las ganancias pero deja apagado el término que las aplica: una orden de posición queda como torque fijo.</p>
+      <p class="sub" style="margin-top:12px">Medido: altura del cuerpo <b>0.077 m</b> (en el suelo). Con el sesgo activado (PD real): <b>0.232 m</b>, de pie.</p>
+    </div>
+    <div class="col">
+      <div class="term" style="margin:0">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="t">workaround (solo simulación)</span></div>
+        <div class="term-body">
+<span class="cmd">go2.set_gains(kp=[40]*12, kd=[1]*12)</span><br>
+<span class="o"># el sesgo quedaba en NONE</span><br>
+<span class="cmd">m = go2.sim.backend.model</span><br>
+<span class="cmd">m.actuator_biastype[:] = mjBIAS_AFFINE</span><br>
+<span class="ok"># z = 0.232 m → STANDING</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7 · El adaptador -->
+<div class="slide v-accent l-split">
+  <div class="split wide-right">
+    <div class="col">
+      <p class="kicker">La pieza clave</p>
+      <h2 style="font-size:2rem"><span class="highlight">StrandsRobotsDriver</span></h2>
+      <p class="sub">Implementa el mismo <span class="mono">RobotDriver</span> de la V1. El agente, las herramientas, los límites y el reflejo se <b>importan sin cambios</b>.</p>
+      <ul class="list" style="margin-top:12px">
+        <li><b>Lazo cerrado:</b> "camina 0.3 m" = 0.3 m medidos, no velocidad × tiempo</li>
+        <li><b>Detecta caídas</b> y corta el movimiento</li>
+        <li><span class="mono">stop()</span> sostiene; el e-stop de la librería solo lo libera un operador</li>
+      </ul>
+    </div>
+    <div class="col">
+      <div class="term" style="margin:0">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="t">strands_driver.py</span></div>
+        <div class="term-body">
+<span class="cmd">def walk(self, direction, meters):</span><br>
+&nbsp;&nbsp;<span class="cmd">start = robot.pose.position[:2]</span><br>
+&nbsp;&nbsp;<span class="cmd">robot.run(gait(vx, vy, 0),</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">stop_when=lambda o:</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ok">dist(o.pose, start) &gt;= meters</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ok">or o.pose.z &lt; fall_z</span>)<br>
+&nbsp;&nbsp;<span class="cmd">robot.hold()</span><br><br>
+<span class="o"># el agente de la V1, sin tocarlo:</span><br>
+<span class="cmd">build_agent(model, robot=StrandsRobotsDriver())</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 8 · Resultados medidos -->
+<div class="slide v-cyan l-left">
+  <p class="kicker">Medido en MuJoCo, con el modelo real (Claude Haiku en Bedrock)</p>
+  <div class="title-rule" style="background:linear-gradient(90deg,var(--cyan),var(--blue))"></div>
+  <h2>Lo que pidió el agente <span class="h-c">vs.</span> lo que hizo el cuerpo</h2>
+  <table class="tbl" style="margin-left:0">
+    <thead><tr><th>Robot</th><th>Orden</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td>microduck (bípedo)</td><td>"avanza 30 centímetros"</td><td><span class="tag good">0.30 m</span></td></tr>
+      <tr><td>microduck</td><td>"gira a la derecha"</td><td><span class="tag good">89°</span></td></tr>
+      <tr><td>microduck</td><td>"walk back 20 centimeters"</td><td><span class="tag good">0.20 m</span></td></tr>
+      <tr><td>microduck</td><td>"alto"</td><td><span class="tag good">reflejo antes del modelo</span></td></tr>
+      <tr><td>unitree_go2 (cuadrúpedo)</td><td>"siéntate" / "párate"</td><td><span class="tag good">0.232 → 0.098 → 0.234 m</span></td></tr>
+      <tr><td>unitree_go2</td><td>"camina 1 metro"</td><td><span class="tag bad">rechazado: sin política de marcha</span></td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin-left:0;margin-top:12px;font-size:.95rem;color:var(--muted)">Limitaciones medidas: el paso lateral desvía el rumbo ~29°; sentarse y pararse desplaza al Go2 ~0.13 m.</p>
+</div>
+
+<!-- 9 · Hallazgo: herramientas en paralelo -->
+<div class="slide v-orange l-left">
+  <p class="kicker" style="color:var(--orange)">Hallazgo 2 · solo apareció con física</p>
+  <div class="title-rule" style="background:linear-gradient(90deg,var(--orange),#fbbf24)"></div>
+  <h2>"Párate y camina" <span class="h-o">corrió a la vez</span></h2>
+  <ul class="list">
+    <li>El modelo pidió <span class="mono">stand()</span> y <span class="mono">walk()</span> en el mismo turno</li>
+    <li>Strands los ejecutó <b>en paralelo</b> por defecto: <span class="mono">walk</span> empezó antes de que el robot terminara de pararse</li>
+    <li>En el simulador de puntos no se notaba; con un cuerpo real es <b>peligroso</b></li>
+    <li>Arreglo en la V1: <span class="mono">tool_executor=SequentialToolExecutor()</span>, una herramienta a la vez, con test</li>
+  </ul>
+  <p class="sub" style="margin-left:0;margin-top:16px;font-size:1.05rem">Lección: un agente que mueve cosas físicas necesita <b>orden</b>, no solo límites.</p>
+</div>
+
+<!-- 10 · El reparto de responsabilidades -->
+<div class="slide v-light l-left">
+  <p class="kicker">Quién decide qué</p>
+  <h2>El agente piensa en <span class="highlight">segundos</span>. El robot, en <span class="highlight">milisegundos</span>.</h2>
+  <table class="tbl" style="margin-left:0">
+    <thead><tr><th>Capa</th><th>Dónde corre</th><th>Ritmo</th><th>Decide</th></tr></thead>
+    <tbody>
+      <tr><td>Agente de lenguaje</td><td>Nube (AgentCore)</td><td>segundos</td><td><b>Qué:</b> "avanza" → comando (vx, wz)</td></tr>
+      <tr><td>Política PPO</td><td><b>ESP32</b></td><td>50 Hz</td><td><b>Cómo</b> mover las patas para cumplirlo</td></tr>
+      <tr><td>Servos y límites</td><td>ESP32 + PCA9685</td><td>50 Hz</td><td>Recorta a límites y velocidad del servo</td></tr>
+      <tr><td>Parada de emergencia</td><td><b>Física</b></td><td>inmediata</td><td>Corta la energía; no depende de nada</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin-left:0;margin-top:14px;font-size:1rem;color:var(--muted)">El agente nunca manda ángulos. Si se pierde la conexión 0.5 s, el robot pasa a (0, 0) y se queda estable.</p>
+</div>
+
+<!-- 11 · Especificación inferida -->
+<div class="slide v-purple l-left">
+  <p class="kicker" style="color:var(--purple)">El robot · todavía no existe</p>
+  <div class="title-rule" style="background:linear-gradient(90deg,var(--purple),var(--blue))"></div>
+  <h2>Especificación <span class="h-p">inferida</span> (todo cambiable)</h2>
+  <table class="tbl" style="margin-left:0">
+    <thead><tr><th>Pieza</th><th>Supuesto</th><th>Por qué</th></tr></thead>
+    <tbody>
+      <tr><td>Cerebro</td><td>ESP32-S3, 240 MHz, con FPU</td><td>barato; un MLP de 6 408 parámetros cabe de sobra</td></tr>
+      <tr><td>Patas</td><td>8 × MG90S (cadera + rodilla), sin realimentación</td><td>lo típico en cuadrúpedos DIY</td></tr>
+      <tr><td>Driver</td><td>PCA9685 por I²C, 16 canales PWM</td><td>libera al ESP32</td></tr>
+      <tr><td>Sensor</td><td>IMU MPU-6050 / ICM-42688</td><td>gravedad y velocidad angular</td></tr>
+      <tr><td>Control</td><td>50 Hz · servo a 10 rad/s</td><td>20 ms por ciclo</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin-left:0;margin-top:12px;font-size:.95rem;color:var(--muted)">Cada número vive en <span class="mono">cloudpaw_rl/spec.py</span> marcado <span class="mono">ASSUMED</span>. Cambia ahí y cambian el entorno, el URDF y el firmware.</p>
+</div>
+
+<!-- 12 · Observación y acción -->
+<div class="slide v-accent l-split">
+  <div class="split wide-right">
+    <div class="col">
+      <p class="kicker">Lo que ve y lo que hace la política</p>
+      <h2 style="font-size:2rem">26 números entran, <span class="highlight">8 salen</span></h2>
+      <p class="sub">Solo lo que el ESP32 puede saber. Los servos no informan su posición, así que la política ve la posición <b>ordenada</b>, no la medida.</p>
+      <p class="sub" style="margin-top:12px">La acción se recorta igual en entrenamiento y en el ESP32: la política nunca aprende a pedir algo que no obtendrá.</p>
+    </div>
+    <div class="col">
+      <div class="term" style="margin:0">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="t">observación (26) → acción (8)</span></div>
+        <div class="term-body">
+<span class="cmd">gravedad proyectada</span>   <span class="o">3  IMU</span><br>
+<span class="cmd">velocidad angular</span>     <span class="o">3  IMU</span><br>
+<span class="cmd">comando (vx, wz)</span>      <span class="o">2  del agente</span><br>
+<span class="cmd">fase de marcha</span>        <span class="o">2  reloj 1.5 Hz</span><br>
+<span class="cmd">posición ordenada</span>     <span class="o">8</span><br>
+<span class="cmd">última acción</span>         <span class="o">8</span><br><br>
+<span class="ok">acción ∈ [-1, 1] × 0.35 rad</span><br>
+<span class="ok">→ recorte a límites y a 10 rad/s</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 13 · Recompensa -->
+<div class="slide v-light l-left">
+  <p class="kicker">PPO · la función de recompensa</p>
+  <h2>Premia seguir la orden; <span class="highlight">castiga lo que rompe servos</span></h2>
+  <div class="grid g2">
+    <div class="card"><h4>Premios</h4><p><b>+1.5</b> seguir la velocidad pedida (núcleo exp(−error²/0.25))<br><b>+0.8</b> seguir el giro pedido<br><b>+0.5</b> seguir vivo</p></div>
+    <div class="card o"><h4>Castigos</h4><p><b>−20</b> alejarse de la altura de pie · <b>−2</b> rebotar · <b>−1</b> inclinarse · <b>−1</b> rozar los topes<br><b>−0.05</b> balancearse · <b>−0.02</b> movimientos bruscos · <b>−0.01</b> pedir más que el servo</p></div>
+  </div>
+  <p class="sub" style="margin-top:18px;font-size:1rem">Fin de episodio: inclinación &gt; ~46° o altura &lt; 50% de la de pie. Cada término sale por separado en <span class="mono">info["terms"]</span>, para ajustar mirando, no adivinando.</p>
+</div>
+
+<!-- 14 · Entrenamiento -->
+<div class="slide v-cyan l-left">
+  <p class="kicker">El entorno de entrenamiento</p>
+  <div class="title-rule" style="background:linear-gradient(90deg,var(--cyan),var(--blue))"></div>
+  <h2>El Go2 como <span class="h-c">sustituto</span> de 8 grados de libertad</h2>
+  <ul class="list">
+    <li>Mientras no exista el modelo del CloudPaw: Go2 en MuJoCo con la <b>abducción bloqueada</b> → 8 articulaciones, como el robot inferido</li>
+    <li>Interfaz de gymnasium (<span class="mono">reset</span>, <span class="mono">step</span>): se conecta a Stable-Baselines3, skrl o CleanRL</li>
+    <li>Un comando aleatorio por episodio: aprende a seguir cualquier "camina" o "gira"</li>
+    <li>Medido: <b>~1 100 pasos/s</b> por proceso; de pie con acción 0; colapso detectado en 0.46 s</li>
+    <li>Plan para pasar a lo real (no ejecutado): masa ±20%, fricción 0.5–1.25, retraso del servo 0–20 ms, ruido de IMU, empujones</li>
+  </ul>
+</div>
+
+<!-- 15 · ESP32 -->
+<div class="slide v-accent l-split">
+  <div class="split wide-right">
+    <div class="col">
+      <p class="kicker">Del entrenamiento al microcontrolador</p>
+      <h2 style="font-size:2rem">Un header en C, <span class="highlight">cero dependencias</span></h2>
+      <p class="sub"><span class="mono">export_c.py</span> convierte el MLP en pesos <span class="mono">static const float</span>: 6 408 parámetros, <b>25 KB</b> de flash.</p>
+      <p class="sub" style="margin-top:12px">Probado: compilado con <span class="mono">cc -Wall -Werror</span> y comparado con numpy, error &lt; 1e-5. <b>No</b> probado aún en una placa.</p>
+    </div>
+    <div class="col">
+      <div class="term" style="margin:0">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="t">bucle cada 20 ms (diseño)</span></div>
+        <div class="term-body">
+<span class="cmd">imu_read(&amp;gravity, &amp;gyro);</span><br>
+<span class="cmd">build_obs(obs, …, cmd_vx, cmd_wz);</span><br>
+<span class="cmd">cloudpaw_policy_forward(obs, act);</span><br>
+<span class="cmd">action_to_targets(act, targets);</span><br>
+<span class="cmd">if (!estop &amp;&amp; !fallen)</span><br>
+&nbsp;&nbsp;<span class="cmd">pca9685_write(targets);</span><br><br>
+<span class="o">// comando por Wi-Fi/MQTT;</span><br>
+<span class="o">// 0.5 s sin comando → (0, 0)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 16 · ROS 2 -->
+<div class="slide v-light l-left">
+  <p class="kicker">ROS 2 Jazzy · paquete cloudpaw_description</p>
+  <h2>Ver cómo se va a <span class="highlight">mover</span></h2>
+  <div class="grid g3">
+    <div class="card"><h4>URDF (xacro)</h4><p>Cuerpo de 20×10 cm, 4 patas de 7.5 + 7.5 cm, cadera y rodilla por pata, IMU. Medidas inferidas.</p></div>
+    <div class="card c"><h4>Trote</h4><p>Pares diagonales (FL+RR, FR+RL), cinemática inversa de 2 eslabones, arco de paso y apoyo. 17 tests sin ROS.</p></div>
+    <div class="card p"><h4>Lanzamientos</h4><p><span class="mono">display</span>: Foxglove o RViz, sin física. <span class="mono">gazebo</span>: física con ros2_control.</p></div>
+  </div>
+  <table class="tbl" style="margin-left:0;margin-top:18px;font-size:.92rem">
+    <tbody>
+      <tr><td><span class="mono">colcon build</span> + <span class="mono">colcon test</span></td><td><span class="tag good">18 tests, 0 fallos</span></td></tr>
+      <tr><td><span class="mono">/joint_states</span> sin pantalla</td><td><span class="tag good">50.0 Hz, 8 articulaciones</span></td></tr>
+      <tr><td>Gazebo + controladores</td><td><span class="tag good">siguen pie (0.6/−1.2) y sentado (1.1/−2.2)</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 17 · Gazebo -->
+<div class="slide v-orange l-left">
+  <p class="kicker" style="color:var(--orange)">Hallazgo 3 · con física de verdad</p>
+  <div class="title-rule" style="background:linear-gradient(90deg,var(--orange),#fbbf24)"></div>
+  <h2>Trota sin caerse. <span class="h-o">Avanza el 5%.</span></h2>
+  <div class="stats" style="justify-content:flex-start;margin-top:10px">
+    <div class="stat"><div class="n">0.069 m</div><div class="l">avanzó en 10 s</div></div>
+    <div class="stat"><div class="n o" data-to="1.5" data-suffix=" m">1.5 m</div><div class="l">lo pedido (0.15 m/s)</div></div>
+    <div class="stat"><div class="n c" data-to="7" data-suffix="°">7°</div><div class="l">alabeo al final, de pie</div></div>
+  </div>
+  <p class="sub" style="margin-left:0;margin-top:22px">La marcha en lazo abierto <b>resbala</b>: no sabe si la pata tocó el suelo, ni cuánto pesa el cuerpo. Es exactamente el hueco que llena la política PPO, que aprende con la física.</p>
+</div>
+
+<!-- 18 · Foxglove -->
+<div class="slide v-accent l-split">
+  <div class="split wide-right">
+    <div class="col">
+      <p class="kicker">Verlo desde tu laptop</p>
+      <h2 style="font-size:2rem">Foxglove <span class="highlight">por un túnel</span></h2>
+      <p class="sub">El bridge escucha solo en <span class="mono">127.0.0.1</span> de la EC2. Un túnel de SSM lo trae a tu máquina: ningún puerto abierto a internet.</p>
+      <p class="sub" style="margin-top:12px;font-size:.95rem;color:var(--muted)">No lo he probado desde tu navegador: el bridge escucha y publica, falta verlo.</p>
+    </div>
+    <div class="col">
+      <div class="term" style="margin:0">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="t">tu Mac</span></div>
+        <div class="term-body">
+<span class="cmd">aws ssm start-session \</span><br>
+&nbsp;&nbsp;<span class="cmd">--target $CLOUDPAW_INSTANCE_ID \</span><br>
+&nbsp;&nbsp;<span class="cmd">--document-name \</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">AWS-StartPortForwardingSession \</span><br>
+&nbsp;&nbsp;<span class="cmd">--parameters portNumber=8765,\</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">localPortNumber=8765</span><br><br>
+<span class="o"># Foxglove → ws://localhost:8765</span><br>
+<span class="o"># panel 3D, marco fijo: odom</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 19 · Verificado vs no -->
+<div class="slide v-light l-left">
+  <p class="kicker">Honestidad de ingeniería</p>
+  <h2>Qué está <span class="highlight">probado</span> y qué no</h2>
+  <table class="tbl" style="margin-left:0;font-size:.9rem">
+    <tbody>
+      <tr><td>Agente V1 sobre física (MuJoCo), modelo real</td><td><span class="tag good">probado</span></td></tr>
+      <tr><td>Adaptador: 20 tests + 5 contra la simulación</td><td><span class="tag good">probado</span></td></tr>
+      <tr><td>Recompensa, observación, acción, entorno: 26 tests</td><td><span class="tag good">probado</span></td></tr>
+      <tr><td>Exportador C vs numpy (&lt; 1e-5)</td><td><span class="tag good">probado</span></td></tr>
+      <tr><td>ROS 2: URDF, 50 Hz, Gazebo, trote con física</td><td><span class="tag good">probado en la EC2</span></td></tr>
+      <tr><td>Política PPO entrenada</td><td><span class="tag ugly">no</span></td></tr>
+      <tr><td>Firmware en un ESP32 real</td><td><span class="tag ugly">no (diseño)</span></td></tr>
+      <tr><td>Modelo físico propio del CloudPaw</td><td><span class="tag ugly">no (Go2 como sustituto)</span></td></tr>
+      <tr><td>Despliegue del agente en AgentCore</td><td><span class="tag bad">pendiente</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 20 · Hoja de ruta -->
+<div class="slide v-purple l-left">
+  <p class="kicker" style="color:var(--purple)">Lo que sigue, en orden</p>
+  <div class="title-rule" style="background:linear-gradient(90deg,var(--purple),var(--blue))"></div>
+  <h2>De la demo al <span class="h-p">perro de verdad</span></h2>
+  <ol class="list">
+    <li><b>Medidas reales:</b> servos, masas, medidas → <span class="mono">spec.py</span> y el URDF</li>
+    <li><b>Modelo MJCF del CloudPaw</b> que sustituye al Go2 en el entorno</li>
+    <li><b>Entrenar PPO</b> en la EC2 con domain randomization; medir velocidad lograda vs. pedida</li>
+    <li><b>Exportar</b> el actor a C y compilarlo con ESP-IDF; medir la inferencia en la placa</li>
+    <li><b>Primer paso real</b> con el robot colgado (patas al aire), luego en el suelo</li>
+    <li><b>Conectar el agente:</b> AgentCore → MQTT (AWS IoT) → ESP32, con la parada física siempre a mano</li>
+  </ol>
+</div>
+
+<!-- 21 · Cierre -->
+<div class="slide v-spot">
+  <p class="kicker">Gracias</p>
+  <h2>El mismo agente, <span class="highlight">cada vez más cerca del suelo</span></h2>
+  <ul class="list" style="max-width:860px">
+    <li>Una frontera (<span class="mono">RobotDriver</span>) que no cambia de la simulación al hardware</li>
+    <li>Tres fallos que solo la física mostró: un robot que se desplomaba, herramientas en paralelo, una marcha que resbala</li>
+    <li>Todo el código, los tests y las mediciones: <span class="mono">github.com/breakingthecloud/cloudpaw</span> (Apache-2.0)</li>
+  </ul>
+  <p class="sub" style="margin-top:24px;font-size:1.05rem;color:var(--text);font-weight:700">Carlos Cortez · AWS Community Hero · IEEE RAS UTEC</p>
+</div>
+
+<div class="brand"><div class="d"></div>CloudPaw V2 · stack completo</div>
+<div class="counter"><span id="cur">1</span> / <span id="tot">21</span></div>
+<div class="nav"><button onclick="nav(-1)">← Prev</button><button onclick="nav(1)">Next →</button></div>
+
+<script src="shared/deck.js"></script>
+</body>
+</html>

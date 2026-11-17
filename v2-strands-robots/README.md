@@ -31,6 +31,29 @@ Pendiente de decidir antes de construirlo: ¿te sirve el `microduck` (bípedo) c
 prefieres esperar a la política propia del Go2/CloudPaw? Ejecutar el adaptador completo en vivo es lento (≈1.5 s de reloj por segundo simulado
 a esta velocidad), así que como mucho es un cierre de la charla, no el núcleo.
 
+## El adaptador (`cloudpaw_v2/strands_driver.py`) — verificado 17-nov
+
+`StrandsRobotsDriver` implementa el mismo `RobotDriver` de la V1: el agente, las 7 herramientas, los límites y el reflejo de
+parada de `app/agent` se usan **sin cambios** (se importan, no se copian). `play_v2.py` es el chat de la V1 sobre la física.
+
+| Robot | Qué hace | Medido en MuJoCo |
+|---|---|---|
+| `microduck` | `walk`/`turn` en **lazo cerrado** sobre la pose medida (`stop_when`), detecta caídas | avanzar 0.3 m → 0.30 m; girar 90° a la derecha → rumbo 89°; retroceder 0.2 m → 0.20 m |
+| `unitree_go2` (cuadrúpedo) | `stand`/`sit` por rampa de articulaciones; `walk`/`turn` se rechazan (`no_gait_policy`) hasta cargar la política PPO (`gait=`) | de pie 0.232 m → sentado 0.098 m → de pie 0.234 m |
+
+Limitaciones medidas: el paso lateral del `microduck` deriva el rumbo (~29° en 0.15 m) y al retroceder ~10°; sentarse y pararse
+desplaza al Go2 ~0.13 m hacia atrás. `stop()` sostiene la pose sin bloquear; `emergency_stop(by=...)` es el e-stop de la librería
+(se bloquea y solo lo libera un operador con nombre), a propósito fuera del alcance del agente.
+
+Encontrado al probar con física: el modelo pidió `stand` y `walk` en el mismo turno y Strands los ejecutó **en paralelo**
+(`walk` corrió antes de que terminara `stand`). La V1 ahora usa `SequentialToolExecutor`: una herramienta a la vez.
+
+```bash
+uv run --with pytest pytest -q -m "not integration"   # 20 tests, sin MuJoCo
+uv run --with pytest pytest -q -m integration         # 5 tests contra la simulación real (~3 s)
+AWS_PROFILE=<perfil> uv run python play_v2.py -c "avanza 30 centímetros y gira a la derecha"
+```
+
 ## Probar el spike
 
 ```bash

@@ -361,3 +361,21 @@ def test_the_aws_error_is_found_even_when_the_sdk_wraps_it():
 @pytest.mark.parametrize("exc", [ValueError("bug"), KeyError("x"), _client_error("ThrottlingException"), RuntimeError("other")])
 def test_anything_else_is_not_hidden(exc):
     assert explain_aws_error(exc) is None
+
+
+def test_the_agent_runs_tools_one_at_a_time():
+    from strands.tools.executors import SequentialToolExecutor
+
+    from cloudpaw.agent import build_agent
+
+    agent, _ = build_agent(model=None)
+    assert isinstance(agent.tool_executor, SequentialToolExecutor)
+
+
+def test_the_terminal_printer_reads_a_python_dict_repr_with_apostrophes():
+    from play import _maybe_json
+
+    text = repr({"ok": False, "reason": "no_gait_policy", "message": "the robot's policy is missing"})
+    assert _maybe_json(text)["reason"] == "no_gait_policy"
+    assert _maybe_json('{"ok": true}') == {"ok": True}
+    assert _maybe_json("not a dict") is None and _maybe_json("[1, 2]") is None

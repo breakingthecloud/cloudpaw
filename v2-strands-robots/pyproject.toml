@@ -7,3 +7,7 @@ dependencies = [
     "strands-robots[mujoco,onnx,tools]>=0.6.0,<0.7",
     "strands-agents>=1.65,<2",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+markers = ["integration: runs the real MuJoCo simulation (slower; downloads models and policies on first use)"]

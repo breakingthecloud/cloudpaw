@@ -10,6 +10,7 @@ Type  /map  to redraw the map,  /exit  to leave.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import sys
 
@@ -30,10 +31,14 @@ def show_state(robot: SimulatedRobot, with_map: bool) -> None:
 
 
 def _maybe_json(text: str):
-    try:
-        return json.loads(text.replace("'", '"').replace("True", "true").replace("False", "false"))
-    except Exception:
-        return None
+    """A tool result as a dict: JSON, or the repr of a Python dict (what Strands puts in the text block)."""
+    for parse in (json.loads, ast.literal_eval):
+        try:
+            value = parse(text)
+            return value if isinstance(value, dict) else None
+        except (ValueError, SyntaxError):
+            continue
+    return None
 
 
 def make_hooks():

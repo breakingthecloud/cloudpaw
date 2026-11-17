@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple
 
 from strands import Agent
+from strands.tools.executors import SequentialToolExecutor
 
 from .prompt import SYSTEM_PROMPT
 from .robot import RobotDriver, SimulatedRobot
@@ -24,6 +25,9 @@ def build_agent(
         model=model,
         system_prompt=SYSTEM_PROMPT,
         tools=make_tools(box),
+        # One movement at a time: the model may ask for several tools in one turn ("stand up and walk"); on a real
+        # robot they must not run at once. Found on the physics simulation (V2): walk ran before stand had finished.
+        tool_executor=SequentialToolExecutor(),
         callback_handler=None,  # no token-by-token printing in logs; the entrypoint streams events itself
         hooks=hooks,
     )

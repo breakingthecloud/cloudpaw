@@ -85,4 +85,4 @@ workshop/tools/say.py ayudante para hablarle al Runtime con sesión fija
 
 ## Estado
 
-V1: probado en local con Claude Haiku 4.5 en Bedrock (español e inglés) y con el runtime local de AgentCore. **No** verificado todavía: el despliegue contra AWS de este proyecto, el Agent Inspector en el navegador y el costo por mensaje. Licencia por definir.
+V1: probado en local con Claude Haiku 4.5 en Bedrock (español e inglés) y con el runtime local de AgentCore. **No** verificado todavía: el despliegue contra AWS de este proyecto, el Agent Inspector en el navegador y el costo por mensaje. Licencia: Apache-2.0 (ver `LICENSE`).

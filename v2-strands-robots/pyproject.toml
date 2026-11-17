@@ -3,6 +3,7 @@ name = "cloudpaw-v2"
 version = "0.1.0"
 description = "CloudPaw V2 (exploration): the same agent and tools, driving a MuJoCo robot through strands-robots"
 requires-python = ">=3.12"
+license = "Apache-2.0"
 dependencies = [
     "strands-robots[mujoco,onnx,tools]>=0.6.0,<0.7",
     "strands-agents>=1.65,<2",

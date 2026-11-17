@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-SKIP_DIRS = {".git", ".venv", "node_modules", ".cache", "cdk.out", "__pycache__", ".pytest_cache", ".cli", "dist"}
+SKIP_DIRS = {".git", ".venv", "node_modules", ".cache", "cdk.out", "__pycache__", ".pytest_cache", ".cli", "dist", ".wrangler"}
 SKIP_FILES = {"uv.lock", "package-lock.json", "pnpm-lock.yaml"}
 TEXT_SUFFIXES = {".py", ".md", ".json", ".ts", ".html", ".css", ".js", ".toml", ".yaml", ".yml", ".txt", ".sh", ".svg", ".log", ".env", ".example", ".xml", ".urdf", ".xacro"}
 
@@ -20,6 +20,7 @@ RULES = {
     "private key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
     "SSO start URL": re.compile(r"[a-z0-9-]+\.awsapps\.com"),
     "personal path": re.compile(r"/Users/[A-Za-z0-9._-]+|[A-Za-z]:\\Users\\"),
+    "Cloudflare account ID": re.compile(r"account_id[\"']?\s*[:=]\s*[\"']?[0-9a-f]{32}"),
 }
 
 
@@ -44,6 +45,7 @@ def test_the_rules_catch_what_they_should():
     assert RULES["AWS access key"].search("AKIA" + "ABCDEFGHIJKLMNOP")
     assert RULES["SSO start URL"].search("https://example" + ".awsapps.com/start")
     assert RULES["personal path"].search("/Users/someone/dev") and not RULES["personal path"].search("~/dev")
+    assert RULES["Cloudflare account ID"].search('{"account_id":"' + "0" * 32 + '"}')
 
 
 def test_no_account_or_personal_data_in_the_repo():

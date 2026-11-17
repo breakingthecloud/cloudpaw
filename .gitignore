@@ -23,6 +23,8 @@ credentials
 
 # ── AgentCore CLI and CDK (their state holds ARNs with the AWS account ID) ─────────────────────────────────────────
 agentcore/.cli/
+# Cloudflare wrangler cache (pages.json holds the Cloudflare account_id)
+.wrangler/
 agentcore/.cache/
 agentcore/cdk/cdk.out/
 agentcore/cdk/cdk.context.json

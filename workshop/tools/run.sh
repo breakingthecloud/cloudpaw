@@ -11,6 +11,9 @@
 # Variables: AWS_PROFILE, AWS_REGION (us-east-1 por defecto), PORT (8081), CLOUDPAW_MODEL_ID.
 
 set -u
+# With ROS 2 sourced (the ops EC2), PYTHONPATH points at ROS's own Python packages: pytest would load ROS plugins that
+# need `lark`, and the agent could import ROS's copies of libraries. The uv environments here are self-contained.
+unset PYTHONPATH
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PORT="${PORT:-8081}"
 MODE="${1:-}"

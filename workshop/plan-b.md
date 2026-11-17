@@ -20,6 +20,7 @@ Regla: **no te disculpes largo, cambia de carril**. Cada nivel baja un escalón 
 | `pnpm install` termina con `ERR_PNPM_IGNORED_BUILDS` (esbuild) y código 1 | pnpm 11 bloquea scripts de instalación hasta que decidas | En este repo ya está decidido (`allowBuilds: esbuild: false`). En un proyecto nuevo: `pnpm approve-builds '!esbuild'` |
 | `agentcore build` dice "CDK dependencies are missing" | Falta instalar en `agentcore/cdk` | `(cd agentcore/cdk && pnpm install)` |
 | El robot "empieza de cero" en cada mensaje | `agentcore invoke` crea una sesión nueva si no le pasas `--session-id` | Usa `workshop/tools/say.py` (sesión fija) |
+| En la EC2, los tests fallan con `No module named 'lark'` | El `PYTHONPATH` de ROS 2 hace que pytest cargue plugins de ROS | Usa `workshop/tools/run.sh test` (limpia `PYTHONPATH`) o `env -u PYTHONPATH uv run ...` |
 | `say.py` dice que la sesión es muy corta | AgentCore pide ≥ 33 caracteres | Usa `--session` con un id largo o `--new` |
 | Puerto ocupado | Otro `agentcore dev` quedó vivo | `agentcore dev --port 8082` y `--port 8082` en `say.py` |
 | El modelo "se salta" un límite | Un modelo débil ignora el prompt | Es el punto de la demo: el límite está en el código; la respuesta del código dice por qué |

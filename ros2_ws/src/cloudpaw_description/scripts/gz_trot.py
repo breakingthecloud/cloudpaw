@@ -7,6 +7,7 @@ Publishes /leg_position_controller/commands at 50 Hz; stands for 1 s first, ends
 import time
 
 import rclpy
+from rcl_interfaces.msg import ParameterDescriptor
 from rclpy.node import Node
 from std_msgs.msg import Float64MultiArray
 
@@ -16,8 +17,9 @@ from cloudpaw_description.gait import JOINTS, STAND, TrotParams, trot_angles
 class GzTrot(Node):
     def __init__(self):
         super().__init__("cloudpaw_gz_trot")
-        self.declare_parameter("speed", 0.15)
-        self.declare_parameter("seconds", 10.0)
+        dynamic = ParameterDescriptor(dynamic_typing=True)  # accept "seconds:=10" as well as "seconds:=10.0"
+        self.declare_parameter("speed", 0.15, dynamic)
+        self.declare_parameter("seconds", 10.0, dynamic)
         self.speed = float(self.get_parameter("speed").value)
         self.duration = float(self.get_parameter("seconds").value)
         self.pub = self.create_publisher(Float64MultiArray, "leg_position_controller/commands", 10)

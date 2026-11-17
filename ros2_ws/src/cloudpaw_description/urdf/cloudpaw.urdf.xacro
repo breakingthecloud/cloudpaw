@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<!--
+  CloudPaw (inferred demo model, 17-nov-2026). 8 servos: hip (pitch) + knee per leg. ALL dimensions and masses are ASSUMED;
+  replace them with the real ones (same numbers as v2-strands-robots/cloudpaw_rl/spec.py). Joint angle 0 = leg straight down.
+  Stand pose: hip 0.6 rad, knee -1.2 rad (body height ~0.12 m).
+  Args: use_gazebo:=true adds ros2_control for Gazebo (gz_ros2_control).
+-->
+<robot name="cloudpaw" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="use_gazebo" default="false"/>
+
+  <xacro:property name="body_l" value="0.20"/>
+  <xacro:property name="body_w" value="0.10"/>
+  <xacro:property name="body_h" value="0.04"/>
+  <xacro:property name="body_m" value="0.40"/>
+  <xacro:property name="thigh_l" value="0.075"/>
+  <xacro:property name="shin_l" value="0.075"/>
+  <xacro:property name="link_r" value="0.008"/>
+  <xacro:property name="link_m" value="0.025"/>
+  <xacro:property name="foot_r" value="0.012"/>
+  <xacro:property name="hip_lim" value="1.2"/>
+  <xacro:property name="knee_lo" value="-2.4"/>
+  <xacro:property name="knee_hi" value="0.0"/>
+  <xacro:property name="effort" value="0.2"/>   <!-- N·m, MG90S ~ 0.18-0.22 -->
+  <xacro:property name="velocity" value="10.0"/> <!-- rad/s -->
+
+  <material name="body_blue"><color rgba="0.13 0.47 0.85 1"/></material>
+  <material name="leg_grey"><color rgba="0.2 0.2 0.22 1"/></material>
+  <material name="foot_orange"><color rgba="1.0 0.6 0.1 1"/></material>
+
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertia ixx="${m*(y*y+z*z)/12}" iyy="${m*(x*x+z*z)/12}" izz="${m*(x*x+y*y)/12}" ixy="0" ixz="0" iyz="0"/>
+  </xacro:macro>
+  <xacro:macro name="rod_inertia" params="m r l">  <!-- cylinder along z -->
+    <inertia ixx="${m*(3*r*r+l*l)/12}" iyy="${m*(3*r*r+l*l)/12}" izz="${m*r*r/2}" ixy="0" ixz="0" iyz="0"/>
+  </xacro:macro>
+
+  <link name="base_link">
+    <visual><geometry><box size="${body_l} ${body_w} ${body_h}"/></geometry><material name="body_blue"/></visual>
+    <collision><geometry><box size="${body_l} ${body_w} ${body_h}"/></geometry></collision>
+    <inertial><mass value="${body_m}"/><xacro:box_inertia m="${body_m}" x="${body_l}" y="${body_w}" z="${body_h}"/></inertial>
+  </link>
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed"><parent link="base_link"/><child link="imu_link"/><origin xyz="0 0 0.01"/></joint>
+
+  <!-- One leg: hip (pitch, about y) -> thigh -> knee (pitch) -> shin -> foot -->
+  <xacro:macro name="leg" params="prefix x y">
+    <link name="${prefix}_thigh">
+      <visual><origin xyz="0 0 ${-thigh_l/2}"/><geometry><cylinder radius="${link_r}" length="${thigh_l}"/></geometry><material name="leg_grey"/></visual>
+      <collision><origin xyz="0 0 ${-thigh_l/2}"/><geometry><cylinder radius="${link_r}" length="${thigh_l}"/></geometry></collision>
+      <inertial><origin xyz="0 0 ${-thigh_l/2}"/><mass value="${link_m}"/><xacro:rod_inertia m="${link_m}" r="${link_r}" l="${thigh_l}"/></inertial>
+    </link>
+    <joint name="${prefix}_hip" type="revolute">
+      <parent link="base_link"/><child link="${prefix}_thigh"/>
+      <origin xyz="${x} ${y} 0"/><axis xyz="0 1 0"/>
+      <limit lower="${-hip_lim}" upper="${hip_lim}" effort="${effort}" velocity="${velocity}"/>
+      <dynamics damping="0.01" friction="0.01"/>
+    </joint>
+    <link name="${prefix}_shin">
+      <visual><origin xyz="0 0 ${-shin_l/2}"/><geometry><cylinder radius="${link_r}" length="${shin_l}"/></geometry><material name="leg_grey"/></visual>
+      <collision><origin xyz="0 0 ${-shin_l/2}"/><geometry><cylinder radius="${link_r}" length="${shin_l}"/></geometry></collision>
+      <inertial><origin xyz="0 0 ${-shin_l/2}"/><mass value="${link_m}"/><xacro:rod_inertia m="${link_m}" r="${link_r}" l="${shin_l}"/></inertial>
+    </link>
+    <joint name="${prefix}_knee" type="revolute">
+      <parent link="${prefix}_thigh"/><child link="${prefix}_shin"/>
+      <origin xyz="0 0 ${-thigh_l}"/><axis xyz="0 1 0"/>
+      <limit lower="${knee_lo}" upper="${knee_hi}" effort="${effort}" velocity="${velocity}"/>
+      <dynamics damping="0.01" friction="0.01"/>
+    </joint>
+    <link name="${prefix}_foot">
+      <visual><geometry><sphere radius="${foot_r}"/></geometry><material name="foot_orange"/></visual>
+      <collision><geometry><sphere radius="${foot_r}"/></geometry></collision>
+      <inertial><mass value="0.005"/><inertia ixx="1e-7" iyy="1e-7" izz="1e-7" ixy="0" ixz="0" iyz="0"/></inertial>
+    </link>
+    <joint name="${prefix}_foot_joint" type="fixed"><parent link="${prefix}_shin"/><child link="${prefix}_foot"/><origin xyz="0 0 ${-shin_l}"/></joint>
+  </xacro:macro>
+
+  <xacro:leg prefix="FL" x="${body_l/2 - 0.01}" y="${body_w/2 + link_r}"/>
+  <xacro:leg prefix="FR" x="${body_l/2 - 0.01}" y="${-body_w/2 - link_r}"/>
+  <xacro:leg prefix="RL" x="${-body_l/2 + 0.01}" y="${body_w/2 + link_r}"/>
+  <xacro:leg prefix="RR" x="${-body_l/2 + 0.01}" y="${-body_w/2 - link_r}"/>
+
+  <xacro:if value="$(arg use_gazebo)">
+    <ros2_control name="cloudpaw_gz" type="system">
+      <hardware><plugin>gz_ros2_control/GazeboSimSystem</plugin></hardware>
+      <xacro:macro name="servo" params="name">
+        <joint name="${name}">
+          <command_interface name="position"/>
+          <state_interface name="position"/><state_interface name="velocity"/>
+        </joint>
+      </xacro:macro>
+      <xacro:servo name="FL_hip"/><xacro:servo name="FL_knee"/>
+      <xacro:servo name="FR_hip"/><xacro:servo name="FR_knee"/>
+      <xacro:servo name="RL_hip"/><xacro:servo name="RL_knee"/>
+      <xacro:servo name="RR_hip"/><xacro:servo name="RR_knee"/>
+    </ros2_control>
+    <gazebo>
+      <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+        <parameters>$(find cloudpaw_description)/config/controllers.yaml</parameters>
+      </plugin>
+    </gazebo>
+  </xacro:if>
+</robot>

@@ -10,6 +10,8 @@ Workshop del proyecto CloudPaw (UTEC · IEEE RAS), 18 de noviembre de 2026.
 > Amazon Bedrock AgentCore. The robot is simulated; a real driver only needs to implement `RobotDriver`.
 > Safety limits live in code, not in the prompt, and a stop word stops the robot before any model reads the message.
 
+Términos y tecnologías del proyecto (V1 y V2): ver [`GLOSARIO.md`](GLOSARIO.md).
+
 ## La idea en una línea
 
 **El modelo propone, el código dispone.** El agente solo tiene 7 herramientas; cada una valida sus argumentos y el estado del robot.

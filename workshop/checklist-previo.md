@@ -58,7 +58,7 @@ cd cloudpaw-workshop
 - [ ] Copia de respaldo: el repo y las slides en un USB y en tu celular.
 - [ ] **Graba una pantalla** de la demo completa el martes (QuickTime). Es tu mejor respaldo.
 - [ ] Pregunta a los organizadores: ¿proyector HDMI o USB-C? ¿hay enchufe? ¿cuántas personas (para el volumen y la letra)?
-- [ ] Completa en la slide 14 la URL del repo y un QR cuando lo publiques (hay un comentario HTML en el archivo).
+- [ ] Completa en la slide 17 la URL del repo y un QR cuando lo publiques (hay un comentario HTML en el archivo).
 
 ## 6. Después del evento
 

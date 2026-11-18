@@ -34,9 +34,87 @@
     </div>
   </div>
   <ul class="list" style="margin-top:18px">
-    <li>En <b>español y en inglés</b>, con las mismas herramientas</li>
-    <li>Hoy el robot es <b>simulado</b>. Cuando el cuadrúpedo esté listo, solo cambia <b>un archivo</b> (el driver)</li>
+    <li><span>En <b>español y en inglés</b>, con las mismas herramientas</span></li>
+    <li><span>Hoy el robot es <b>simulado</b>. Cuando el cuadrúpedo esté listo, solo cambia <b>un archivo</b> (el driver)</span></li>
   </ul>
+</div>
+
+<!-- P1 · Preámbulo: Strands Agents -->
+<div class="slide v-accent l-split">
+  <div class="split wide-right">
+    <div class="col">
+      <p class="kicker">Preámbulo 1 de 3 · la herramienta</p>
+      <h2 style="font-size:2rem">¿Qué es <span class="highlight">Strands Agents</span>?</h2>
+      <p class="sub">Un SDK de <b>código abierto</b> de AWS para construir agentes en Python (y TypeScript).</p>
+      <ul class="list" style="margin-top:12px">
+        <li><span><b>Guiado por el modelo:</b> tú das el modelo, las herramientas y el prompt; el modelo decide el bucle</span></li>
+        <li><span><b>Herramientas = funciones de Python</b> con <span class="mono">@tool</span>; el docstring y los tipos son su manual</span></li>
+        <li><span><b>Cualquier proveedor:</b> Amazon Bedrock, Anthropic, OpenAI, Gemini, Ollama, LiteLLM…</span></li>
+        <li><span>En CloudPaw: <span class="mono">Agent</span>, <span class="mono">@tool</span>, hooks y ejecución de herramientas una a una</span></li>
+      </ul>
+    </div>
+    <div class="col">
+      <div class="term" style="margin:0">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="t">un agente en 8 líneas</span></div>
+        <div class="term-body">
+<span class="cmd">from strands import Agent, tool</span><br><br>
+<span class="o">@tool</span><br>
+<span class="cmd">def walk(direction: str, meters: float) -&gt; dict:</span><br>
+&nbsp;&nbsp;<span class="o">"""Caminar en línea recta."""</span><br>
+&nbsp;&nbsp;<span class="cmd">return robot.walk(direction, meters)</span><br><br>
+<span class="cmd">agent = Agent(model=modelo, tools=[walk])</span><br>
+<span class="cmd">agent("avanza 2 metros")</span><br>
+<span class="ok"># → walk(direction="forward", meters=2)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- P2 · Preámbulo: Strands Robots -->
+<div class="slide v-purple l-split">
+  <div class="split wide-right">
+    <div class="col">
+      <p class="kicker" style="color:var(--purple)">Preámbulo 2 de 3 · el cuerpo</p>
+      <h2 style="font-size:2rem">¿Qué es <span class="h-p">Strands Robots</span>?</h2>
+      <p class="sub">Librería de código abierto de Strands Labs (<span class="mono">strands-robots</span>, v0.6.0, noviembre 2026): <b>el mismo código mueve un robot simulado o uno real</b>.</p>
+      <ul class="list" style="margin-top:12px">
+        <li><span><b>Simulation:</b> un mundo con física (MuJoCo, en CPU)</span></li>
+        <li><span><b>Robot:</b> un cuerpo en ese mundo o en hardware; 76 robots por nombre</span></li>
+        <li><span><b>Policy:</b> convierte lo que el robot siente en movimiento</span></li>
+        <li><span><b>Seguridad:</b> límites por articulación, e-stop, aprobación del operador en hardware real</span></li>
+      </ul>
+      <p class="sub" style="margin-top:10px;font-size:.92rem;color:var(--muted)">Hoy no trae marcha para cuadrúpedos y solo lee robots Unitree. CloudPaw lo usa en su V2.</p>
+    </div>
+    <div class="col">
+      <div class="term" style="margin:0">
+        <div class="term-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="t">un robot para el agente</span></div>
+        <div class="term-body">
+<span class="cmd">from strands import Agent</span><br>
+<span class="cmd">from strands_robots import Robot, Policy</span><br><br>
+<span class="cmd">duck = Robot("microduck")</span>  <span class="o"># MuJoCo</span><br>
+<span class="cmd">duck.run(Policy("microduck?vx=0.3"),</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">seconds=5)</span><br><br>
+<span class="cmd">Agent(tools=[duck.tool])(</span><br>
+&nbsp;&nbsp;<span class="cmd">"camina un poco y luego detente")</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- P3 · Preámbulo: servicios de AWS -->
+<div class="slide v-light l-left">
+  <p class="kicker">Preámbulo 3 de 3 · la nube</p>
+  <h2>Los servicios de <span class="highlight">AWS</span> que usamos</h2>
+  <div class="grid g3">
+    <div class="card"><h4><img src="assets/aws-bedrock.svg" alt="Amazon Bedrock" style="width:30px;height:30px"> Amazon Bedrock</h4><p>Modelos de IA por API, sin servidores. Aquí: <b>Claude Haiku</b>. Se paga por token.</p></div>
+    <div class="card c"><h4><img src="assets/aws-bedrock-agentcore.svg" alt="Amazon Bedrock AgentCore" style="width:30px;height:30px"> AgentCore Runtime</h4><p>Despliega el agente como un endpoint; cada conversación corre en su propia sesión aislada.</p></div>
+    <div class="card p"><h4><img src="assets/aws-cloudwatch.svg" alt="Amazon CloudWatch" style="width:30px;height:30px"> Amazon CloudWatch</h4><p>Logs y trazas: qué herramienta pidió el modelo y qué respondió el código.</p></div>
+    <div class="card o"><h4><img src="assets/aws-iam.svg" alt="AWS IAM" style="width:30px;height:30px"> AWS IAM</h4><p>Permisos mínimos: el agente solo puede <b>invocar modelos</b>, nada más.</p></div>
+    <div class="card"><h4><img src="assets/aws-cdk.svg" alt="AWS CDK" style="width:30px;height:30px"> AWS CDK</h4><p>Lo que <span class="mono">agentcore deploy</span> usa por debajo para crear la infraestructura.</p></div>
+    <div class="card c"><h4><img src="assets/aws-ec2.svg" alt="Amazon EC2" style="width:30px;height:30px"> EC2 + <img src="assets/aws-systems-manager.svg" alt="AWS Systems Manager" style="width:30px;height:30px"> SSM</h4><p>Centro de operaciones (V2): ROS 2, simulación y entrenamiento, sin puertos abiertos.</p></div>
+  </div>
 </div>
 
 <!-- 3 · Qué es un agente -->
@@ -164,10 +242,10 @@
   <div class="title-rule" style="background:linear-gradient(90deg,var(--orange),#fbbf24)"></div>
   <h2>Qué <span class="h-o">no</span> le toca a la nube</h2>
   <ul class="list">
-    <li><b>La parada de emergencia es física.</b> Un botón o un corte de energía, que no dependa de Internet, del modelo ni de tu laptop</li>
-    <li><b>El equilibrio y los motores son lazos locales</b> (cientos de veces por segundo). Un mensaje al agente tarda segundos</li>
-    <li><b>El agente es el nivel de intención:</b> "ve hacia la puerta". Tradúcelo a movimientos acotados y deja que el robot los ejecute</li>
-    <li><b>Los límites del agente son una segunda barrera,</b> no la única. El firmware del robot también debe tener los suyos</li>
+    <li><span><b>La parada de emergencia es física.</b> Un botón o un corte de energía, que no dependa de Internet, del modelo ni de tu laptop</span></li>
+    <li><span><b>El equilibrio y los motores son lazos locales</b> (cientos de veces por segundo). Un mensaje al agente tarda segundos</span></li>
+    <li><span><b>El agente es el nivel de intención:</b> "ve hacia la puerta". Tradúcelo a movimientos acotados y deja que el robot los ejecute</span></li>
+    <li><span><b>Los límites del agente son una segunda barrera,</b> no la única. El firmware del robot también debe tener los suyos</span></li>
   </ul>
 </div>
 
@@ -214,11 +292,11 @@
   <div class="title-rule" style="background:linear-gradient(90deg,var(--purple),var(--blue))"></div>
   <h2>Lo que sigue, <span class="h-p">en orden</span></h2>
   <ul class="list">
-    <li><b>Driver real:</b> implementar <code>RobotDriver</code> con ROS 2 (o serial). El agente y los tests no cambian</li>
-    <li><b>Sensores como herramientas de solo lectura:</b> distancia, batería, inclinación</li>
-    <li><b>Lugares con nombre:</b> "ve a la puerta", con AgentCore Memory</li>
-    <li><b>Voz:</b> hablarle en vez de escribir</li>
-    <li><b>Evaluaciones:</b> un conjunto de frases en ES/EN que se corre antes de cada cambio</li>
+    <li><span><b>Driver real:</b> implementar <code>RobotDriver</code> con ROS 2 (o serial). El agente y los tests no cambian</span></li>
+    <li><span><b>Sensores como herramientas de solo lectura:</b> distancia, batería, inclinación</span></li>
+    <li><span><b>Lugares con nombre:</b> "ve a la puerta", con AgentCore Memory</span></li>
+    <li><span><b>Voz:</b> hablarle en vez de escribir</span></li>
+    <li><span><b>Evaluaciones:</b> un conjunto de frases en ES/EN que se corre antes de cada cambio</span></li>
   </ul>
 </div>
 
@@ -227,16 +305,19 @@
   <p class="kicker">Gracias</p>
   <h2>Lo que te llevas</h2>
   <ul class="list" style="max-width:820px">
-    <li>Un agente que convierte texto en acciones <b>acotadas</b></li>
-    <li>Límites en <b>código</b>, un reflejo de parada y estados explícitos</li>
-    <li>El camino de tu laptop a la nube con <b>cuatro comandos</b></li>
+    <li><span>Un agente que convierte texto en acciones <b>acotadas</b></span></li>
+    <li><span>Límites en <b>código</b>, un reflejo de parada y estados explícitos</span></li>
+    <li><span>El camino de tu laptop a la nube con <b>cuatro comandos</b></span></li>
   </ul>
   <p class="sub" style="margin-top:26px;font-size:1.05rem;color:var(--text);font-weight:700">Carlos Cortez · AWS Community Hero · IEEE RAS UTEC</p>
-  <!-- Repo y QR: añadir aquí la URL del repositorio cloudpaw-workshop cuando esté publicado. -->
+  <div style="display:flex;align-items:center;gap:22px;margin-top:22px">
+    <img src="assets/repo-qr.svg" alt="QR al repositorio" style="width:120px;height:120px;border-radius:8px">
+    <p class="sub" style="margin:0;font-size:1.05rem"><b>El código es tuyo:</b><br><code>github.com/breakingthecloud/cloudpaw</code></p>
+  </div>
 </div>
 
 <div class="brand"><div class="d"></div>CloudPaw · Strands + AgentCore</div>
-<div class="counter"><span id="cur">1</span> / <span id="tot">14</span></div>
+<div class="counter"><span id="cur">1</span> / <span id="tot">17</span></div>
 <div class="nav"><button onclick="nav(-1)">← Prev</button><button onclick="nav(1)">Next →</button></div>
 
 <script src="shared/deck.js"></script>

@@ -30,13 +30,13 @@ tiempos por mensaje fueron de 2 a 8 s, y con "avanza 10 metros" el modelo a vece
 
 | Min | Bloque | Material |
 |---|---|---|
-| 0:00–0:15 | Teoría | Slides 1–10 |
+| 0:00–0:15 | Teoría (con preámbulo) | Slides 1–13 |
 | 0:15–0:17 | Paso 1: el esqueleto | Terminal C (scratch) |
 | 0:17–0:23 | Paso 2: hablarle al robot | `play.py` |
 | 0:23–0:28 | Paso 3: límites y reflejo | `play.py` + código |
 | 0:28–0:32 | Paso 4: el mismo agente, como servicio local | `agentcore dev` + `say.py` |
 | 0:32–0:41 | Paso 5: a la nube | `agentcore deploy` + `say.py` |
-| 0:41–0:45 | Paso 6: ver qué pensó + cierre | trazas, slides 13–14 |
+| 0:41–0:45 | Paso 6: ver qué pensó + cierre | trazas, slides 16–17 |
 
 **Truco de tiempo:** el `deploy` es lo más impredecible. **Lánzalo en una segunda terminal al empezar el paso 2** (o ten el agente ya desplegado desde el martes) y tráelo de vuelta en el paso 5.
 
@@ -48,17 +48,20 @@ tiempos por mensaje fueron de 2 a 8 s, y con "avanza 10 metros" el modelo a vece
 |---|---|---|
 | 0:00 | 1 | Presentación breve. "Hoy vamos a escribirle órdenes de texto a un robot." |
 | 0:30 | 2 | Muestra lo que se va a ver. "Hoy el robot es simulado; mañana, el cuadrúpedo real." |
-| 1:30 | 3 | Agente = modelo + herramientas + bucle. "Un chatbot contesta; un agente actúa." |
-| 3:00 | 4 | Una herramienta es una función con tipos. El `Literal` es un menú cerrado. |
-| 5:00 | 5 | **La idea central:** el modelo propone, el código dispone. Recorre las 4 capas de la tabla. |
-| 7:30 | 6 | Cada capa existe porque algo falló al probar. Cuenta el caso de "ya estoy parado". |
-| 9:30 | 7 | La arquitectura de abajo hacia arriba; el driver es lo único que cambia con el robot real. |
-| 11:00 | 8 | Los 7 verbos. "Nada más." |
-| 12:00 | 9 | AgentCore: Runtime y observabilidad. No te metas en Memory/Gateway hoy. |
-| 13:30 | 10 | **Honestidad de ingeniería:** la parada de emergencia es física y los lazos de control son locales. Esto es lo que más valor tiene para ellos. |
-| 15:00 | 11 | "Pasemos a la terminal." |
+| 1:15 | 3 | **Preámbulo:** qué es Strands Agents. SDK abierto: modelo + herramientas + prompt; el modelo decide el bucle. |
+| 2:30 | 4 | **Preámbulo:** qué es Strands Robots. El mismo código en simulación o en hardware; hoy no trae marcha de cuadrúpedo (por eso existe la V2). |
+| 3:30 | 5 | **Preámbulo:** los servicios de AWS. Bedrock (modelo), AgentCore (despliegue), CloudWatch (trazas), IAM (permisos), CDK, EC2 + SSM. |
+| 4:45 | 6 | Agente = modelo + herramientas + bucle. "Un chatbot contesta; un agente actúa." |
+| 5:45 | 7 | Una herramienta es una función con tipos. El `Literal` es un menú cerrado. |
+| 7:00 | 8 | **La idea central:** el modelo propone, el código dispone. Recorre las 4 capas de la tabla. |
+| 9:00 | 9 | Cada capa existe porque algo falló al probar. Cuenta el caso de "ya estoy parado". |
+| 10:30 | 10 | La arquitectura de abajo hacia arriba; el driver es lo único que cambia con el robot real. |
+| 11:45 | 11 | Los 7 verbos. "Nada más." |
+| 12:15 | 12 | AgentCore: Runtime y observabilidad (ya presentado en la 5: pásala rápido). |
+| 13:15 | 13 | **Honestidad de ingeniería:** la parada de emergencia es física y los lazos de control son locales. Esto es lo que más valor tiene para ellos. |
+| 15:00 | 14 | "Pasemos a la terminal." |
 
-Si vas corto de tiempo, recorta la slide 8 (la tabla se puede leer en el repo) y la 9.
+El preámbulo (3–5) suma ~3.5 min. Si vas corto de tiempo, recorta la slide 11 (la tabla se puede leer en el repo) y la 12 (repite la 5).
 
 ---
 
@@ -146,7 +149,7 @@ Notas:
 agentcore traces runtime list --since 30m
 agentcore logs runtime --since 10m
 ```
-o abre CloudWatch → *GenAI Observability*. Muestra una traza: ven la llamada a `walk`, sus argumentos y la respuesta. Cierra con las slides 13 (qué sigue) y 14.
+o abre CloudWatch → *GenAI Observability*. Muestra una traza: ven la llamada a `walk`, sus argumentos y la respuesta. Cierra con las slides 16 (qué sigue) y 17.
 
 **Después del evento:** limpia lo desplegado (`agentcore remove all --yes` y luego `agentcore deploy --yes`) para no dejar recursos.
 

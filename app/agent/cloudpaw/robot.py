@@ -132,8 +132,27 @@ def heading_arrow(heading: float) -> str:
 
 def render_map(trail: List[Pose], width: int = 31, height: int = 13) -> str:
     """ASCII top view: S = start, · = path, arrow = where the robot is and faces. North (up) = start heading."""
-    xs = [p.x for p in trail]
-    ys = [p.y for p in trail]
+    return _draw([(trail, "·")], trail[-1], "S = start   N = start heading", width, height, overwrite=False)
+
+
+# one character per message, in order; cycles after 35
+HISTORY_LABELS = "123456789abcdefghijklmnopqrstuvwxyz"
+
+
+def render_history(segments: List[List[Pose]], width: int = 31, height: int = 13) -> str:
+    """Cumulative top view across messages and runs: each segment is drawn with its message number."""
+    if not segments:
+        return _draw([([Pose(0.0, 0.0, 0.0)], "·")], Pose(0.0, 0.0, 0.0), "S = first start   (no movements yet)", width, height)
+    paths = [(seg, HISTORY_LABELS[i % len(HISTORY_LABELS)]) for i, seg in enumerate(segments)]
+    legend = f"S = first start   1,2,3... = message order ({len(segments)} total)"
+    return _draw(paths, segments[-1][-1], legend, width, height, overwrite=True)
+
+
+def _draw(paths, last: Pose, legend: str, width: int, height: int, overwrite: bool = True) -> str:
+    """Draw (trail, char) paths on one grid, S at the origin and an arrow at `last`. Later paths draw on top."""
+    pts = [p for trail, _ in paths for p in trail]
+    xs = [p.x for p in pts]
+    ys = [p.y for p in pts]
     min_x, max_x = min(xs + [0.0]), max(xs + [0.0])
     min_y, max_y = min(ys + [0.0]), max(ys + [0.0])
     # a character is about twice as tall as wide: one row covers twice the meters of one column
@@ -148,15 +167,15 @@ def render_map(trail: List[Pose], width: int = 31, height: int = 13) -> str:
         if 0 <= row < height and 0 <= col < width and (not only_if_empty or grid[row][col] == " "):
             grid[row][col] = ch
 
-    for a, b in zip(trail, trail[1:]):
-        steps = max(1, int(max(abs(b.x - a.x) / cell_x, abs(b.y - a.y) / cell_y) * 2))
-        for i in range(steps + 1):
-            t = i / steps
-            put(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, "·", only_if_empty=True)
+    for trail, ch in paths:
+        for a, b in zip(trail, trail[1:]):
+            steps = max(1, int(max(abs(b.x - a.x) / cell_x, abs(b.y - a.y) / cell_y) * 2))
+            for i in range(steps + 1):
+                t = i / steps
+                put(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, ch, only_if_empty=not overwrite)
     put(0.0, 0.0, "S")
-    last = trail[-1]
     put(last.x, last.y, heading_arrow(last.heading))
 
     border = "+" + "-" * width + "+"
     body = ["|" + "".join(r) + "|" for r in grid]
-    return "\n".join([border, *body, border, f"1 column = {cell_x:.2f} m   S = start   N = start heading"])
+    return "\n".join([border, *body, border, f"1 column = {cell_x:.2f} m   {legend}"])
